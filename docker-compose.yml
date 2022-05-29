@@ -1,0 +1,50 @@
+version: '2.4'
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tech_task
+    env_file:
+      - ./core/env_vars/docker.env
+      - ./core/env_vars/dev_env.env
+      - ./core/env_vars/db/dev_db.env
+    volumes:
+      - .:/web
+    depends_on:
+      - db
+    expose:
+      - "9001"
+    command:
+      /bin/bash -c "pip install -U pip; pip install -r requirements_dev.txt"
+    tty: true
+    stdin_open: true
+
+  db:
+    image: postgres:9.6
+    env_file:
+      - ./cire/env_vars/db/dev_db.env
+    command: postgres
+    ports:
+      - '5432:5432'
+
+  redis:
+    image: redis:6.2.6
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tech_task
+    command: /bin/bash -c "pip install -U pip; pip install -r requirements_dev.txt; celery -A config.celery worker -l debug -c 2 --pidfile="
+    volumes_from:
+      - web
+    env_file:
+      - ./core/env_vars/docker.env
+      - ./core/env_vars/dev_env.env
+      - ./core/env_vars/db/dev_db.env
+    depends_on:
+      - redis
+      - db
+      - web
+
